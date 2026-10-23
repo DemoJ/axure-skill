@@ -1,0 +1,20 @@
+{
+  "steps": [
+    {"open":"交互工作台","target":"status","text":"欢迎，访客","name":"页面加载与全局变量表达式"},
+    {"target":"dialog","visible":false,"name":"弹窗初始隐藏","screenshot":true},
+    {"click":"tab_details","wait":300,"target":"details_title","visible":true,"name":"动态面板切换与动画"},
+    {"click":"complete","target":"done","visible":true,"name":"嵌套面板切换"},
+    {"click":"tab_overview","wait":300,"target":"overview_title","visible":true,"name":"切回第一个状态"},
+    {"click":"open_dialog","target":"dialog","visible":true,"name":"显示 Lightbox"},
+    {"click":"close_dialog","target":"dialog","visible":false,"name":"关闭 Lightbox"},
+    {"click":"greet","target":"status","text":"请先输入名字","name":"空值条件分支"},
+    {"target":"name_input","fill":"小林","name":"输入表单数据"},
+    {"click":"greet","target":"status","text":"小林","name":"变量赋值与文字绑定"},
+    {"click":"goto","url":"订单列表","name":"原生页面跳转"},
+    {"target":"row_name","texts":["订单 A","订单 B","订单 C"],"name":"中继器 Item 数据绑定"},
+    {"click":"filter","target":"row_name","texts":["订单 A","订单 B"],"name":"中继器筛选"},
+    {"click":"all","target":"row_name","texts":["订单 A","订单 B","订单 C"],"name":"中继器恢复全部行"},
+    {"click":"sort","target":"row_name","texts":["订单 B","订单 A","订单 C"],"name":"中继器数值排序"},
+    {"click":"return","url":"交互工作台","target":"status","text":"欢迎，小林","name":"跨页面变量保持"}
+  ]
+}

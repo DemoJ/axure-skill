@@ -1,0 +1,14 @@
+{
+  "name": "axure-skill",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Optional headless tests for native Axure RP9 HTML exports",
+  "license": "MIT",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test:runtime": "node scripts/runtime_test.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}

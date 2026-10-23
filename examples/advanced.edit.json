@@ -1,0 +1,9 @@
+{
+  "updates": [
+    {"page":"交互工作台","widget":"details_title","set":{"text":"订单详情已更新"}},
+    {"page":"交互工作台","widget":"tab_overview","events":{"OnClick":[
+      {"type":"set_panel_state","target":"content","state":"概览"},
+      {"type":"set_text","target":"status","value":"交互编辑已生效"}
+    ]}}
+  ]
+}

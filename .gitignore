@@ -1,0 +1,43 @@
+# Locally generated Axure templates, schemas, official API and test caches
+.cache/
+.axure-*/
+
+# Python and optional Node dependencies
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+node_modules/
+
+# Locally compiled helpers and third-party binaries
+*.exe
+*.dll
+*.pdb
+*.zip
+
+# Prototype output, extracted native records and validation reports
+outputs/
+deliverables/
+*.rp
+*.rplib
+*.raw
+*.part
+*.checked
+*.manifest.json
+*.verification.json
+*.runtime.json
+*.log
+
+# Local host installations, editor settings and secrets
+/.agents/
+/.claude/
+/.cursor/
+/.opencode/
+/.codex/
+.vscode/
+.idea/
+.env
+.env.*
+.DS_Store
+Thumbs.db
+Desktop.ini

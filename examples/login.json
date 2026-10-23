@@ -1,0 +1,29 @@
+{
+  "title": "后台生成的登录原型",
+  "pages": [
+    {
+      "id": "login",
+      "name": "登录",
+      "widgets": [
+        {"id": "background", "kind": "rect", "x": 0, "y": 0, "width": 1440, "height": 900, "fill": "#F5F7FB", "border_width": 0},
+        {"id": "card", "kind": "rect", "x": 480, "y": 160, "width": 480, "height": 560, "fill": "#FFFFFF", "border_color": "#E4E7ED", "border_width": 1},
+        {"id": "title", "kind": "text", "x": 536, "y": 216, "width": 368, "height": 48, "text": "欢迎回来", "font_size": 32, "bold": true, "color": "#182230"},
+        {"id": "subtitle", "kind": "text", "x": 536, "y": 274, "width": 368, "height": 32, "text": "登录你的工作空间", "font_size": 15, "color": "#667085"},
+        {"id": "email_label", "kind": "text", "x": 536, "y": 334, "width": 368, "height": 24, "text": "邮箱", "font_size": 14},
+        {"id": "email", "kind": "input", "x": 536, "y": 366, "width": 368, "height": 48, "placeholder": "name@example.com"},
+        {"id": "password_label", "kind": "text", "x": 536, "y": 438, "width": 368, "height": 24, "text": "密码", "font_size": 14},
+        {"id": "password", "kind": "input", "x": 536, "y": 470, "width": 368, "height": 48, "placeholder": "请输入密码", "password": true},
+        {"id": "remember", "kind": "checkbox", "x": 536, "y": 542, "width": 160, "height": 24, "text": "记住我", "font_size": 14},
+        {"id": "submit", "kind": "button", "x": 536, "y": 596, "width": 368, "height": 48, "text": "登录", "font_size": 16, "fill": "#2563EB", "color": "#FFFFFF"}
+      ]
+    },
+    {
+      "id": "workspace",
+      "name": "工作空间",
+      "widgets": [
+        {"id": "heading", "kind": "text", "x": 80, "y": 72, "width": 600, "height": 56, "text": "我的工作空间", "font_size": 32, "bold": true},
+        {"id": "description", "kind": "text", "x": 80, "y": 152, "width": 700, "height": 56, "text": "此工程通过本地程序生成，可在 Axure 中继续编辑。", "font_size": 18}
+      ]
+    }
+  ]
+}

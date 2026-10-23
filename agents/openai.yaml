@@ -1,0 +1,4 @@
+interface:
+  display_name: "Axure Skill"
+  short_description: "后台生成可编辑 RP9 原型，支持页面跳转、嵌套动态面板、变量和中继器，不占用键鼠"
+  default_prompt: "使用 $axure-skill 在后台创建带页面跳转、动态面板和条件交互的原生 Axure 原型，并导出真实 HTML 验证。"

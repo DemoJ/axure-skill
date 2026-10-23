@@ -1,0 +1,9 @@
+{"steps":[
+  {"open":"控件与动作","target":"choice","value":"已完成","options":["待处理","已完成"],"name":"下拉列表选项与初始选中"},
+  {"target":"list","options":["A","B","C"],"name":"列表框选项"},
+  {"hover":"shape","target":"shape","visual_style":{"backgroundColor":"rgb(22, 163, 74)","borderRadius":"12px"},"name":"原生鼠标悬停样式与圆角"},
+  {"click":"animate","wait":100,"target":"shape","style":{"left":"400px","top":"96px","width":"240px","height":"100px","opacity":"0.5"},"rotation":15,"name":"移动、尺寸、透明度与旋转组合动作"},
+  {"target":"input","value":"动作已完成","focused":true,"name":"设置表单文本与聚焦"},
+  {"target":"checkbox","checked":true,"name":"设置勾选状态"},
+  {"target":"textarea","disabled":true,"name":"禁用多行输入框"}
+]}

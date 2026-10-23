@@ -1,0 +1,7 @@
+{
+  "steps": [
+    {"open":"交互工作台","target":"status","text":"欢迎，访客","name":"编辑工程保留页面事件与变量"},
+    {"click":"tab_details","wait":300,"target":"details_title","text":"订单详情已更新","name":"嵌套状态内的文字修改"},
+    {"click":"tab_overview","wait":300,"target":"status","text":"交互编辑已生效","name":"替换已有控件交互"}
+  ]
+}
