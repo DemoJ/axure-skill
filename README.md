@@ -66,7 +66,9 @@ Claude Code、Cursor、OpenCode、Codex 的目录说明、官方文档链接、�
 
 加载后可以用自然语言请求：
 
-> 使用 axure-skill 做一个订单管理原型，包含列表页和详情页、状态切换、条件弹窗，以及中继器筛选排序，保存为可编辑 RP 文件并导出 HTML 验证。
+> 使用 axure-skill 做一个订单管理原型，包含列表页和详情页、状态切换、条件弹窗，以及中继器筛选排序，保存为可编辑 RP 文件并导出可交互 HTML 预览。
+
+默认生成并交付，不自动截图、运行浏览器测试或多轮视觉微调；“精美”“高保真”“可交互”不会自动开启精细检查。需要时明确补充“检查视觉”“测试交互”或“做完整验收”，只检查相应范围。原生保存/回读等内置文件校验始终保留，流程见 [可选精细检查](references/validation.md)。
 
 没有 skill 加载器的 Agent，可以直接读取根目录的 `SKILL.md` 并执行其中的 CLI。**跨 Agent 不等于跨运行环境**：完整生成仍需要能访问 Axure 安装和目标文件的 Windows 执行器。仅有云端 Linux 容器或没有命令工具的聊天 Agent，不能直接操作用户本地 Axure。
 
@@ -106,7 +108,9 @@ CLI 结果含 `elapsed_seconds`。`create` 已包含原生保存回读和可用�
 
 原生编辑布局需在绘制 spec 时安排实际坐标：默认以 1440px 为参考，390px 移动端画面放在 x=525，左右各有 525px 空间；面板内部保持相对坐标。原生居中导出自动消除这个起始 x 偏移，手机演示仍为 390px。单改 `page_alignment` 不会改变编辑画布中的位置，完整约束见 [原生编辑布局与演示布局](references/spec.md#原生编辑布局与演示布局)。
 
-## 官方核验和预览
+## 可选：官方核验和原生预览
+
+以下命令供明确要求独立核验或原生 PNG 时使用，不是默认原型交付步骤。
 
 从 [Axure 官方 API 页面](https://www.axure.com/axure-rp-api/) 获取 **RP9** 只读 API，将其中 `Axure.Document.dll` 放到：
 
@@ -126,7 +130,7 @@ python "$skill\scripts\smoke_test.py"
 
 ## 可选：复现真实交互检查
 
-此部分只对 HTML 运行测试需要，不是生成 RP/HTML 的前置条件。在实际 skill 根目录安装本地测试依赖；以下命令接续上面的 `$skill` 变量：
+仅在用户明确要求运行检查时执行本节；生成 RP/HTML 无需这些依赖，也不提前检查或安装浏览器。在实际 skill 根目录配置本地测试依赖；以下命令接续上面的 `$skill` 变量：
 
 ```powershell
 Push-Location $skill
@@ -141,7 +145,7 @@ node "$skill\scripts\runtime_test.cjs" .\outputs\advanced-html "$skill\examples\
 
 测试使用无头浏览器 DOM 交互，不移动桌面鼠标，不向 Windows 桌面发送键盘输入。临时 HTTP 服务仅监听 `127.0.0.1`，结束后关闭。stdout 输出 JSON 报告，stderr 显示当前步骤；任何断言或页面脚本错误都会导致非零退出。
 
-在测试计划中使用 `screenshot:"screenshots/login.png"` 可一次保存多张截图，路径相对计划文件；原 `screenshot:true` 与命令行预览 PNG 用法保留。具体例子见 [交互文档](references/interactions.md)。
+在测试计划中使用 `screenshot:"screenshots/login.png"` 可一次保存多张截图，路径相对计划文件；同一步加 `screenshot_target:"screen"` 可直接截取指定画面，避免另写裁剪脚本。原 `screenshot:true` 与命令行预览 PNG 用法保留。具体例子见 [交互文档](references/interactions.md)。
 
 其他两组测试：
 

@@ -49,7 +49,7 @@ Axure 的无限编辑画布和浏览器演示是两件事。`page_alignment` 只
 | font_family / bold | 字体名 / 布尔值 | 使用已安装字体 |
 | color / fill / border_color | #RRGGBB 或 #AARRGGBB | 文字、填充和边框色 |
 | border_width | 非负数 | 边框宽度 |
-| align | left / center / right | 水平文字对齐 |
+| align | left / center / right | 水平文字对齐；适用于 text、heading、rect、button 等文字控件 |
 | hidden / disabled / selected | 布尔值 | 原生初始状态；取决于控件具有该属性 |
 | tooltip / selection_group | 字符串 | 原生提示与选择组；不适用的原生字段报错 |
 | events | 对象 | 原生事件树，见 interactions 文档 |
@@ -90,6 +90,10 @@ Axure 的无限编辑画布和浏览器演示是两件事。`page_alignment` 只
 ```
 
 `OUTER_SHADOW` 字段区分大小写；`Color` 接受 #RRGGBB / #AARRGGBB 或原生 ARGB 整数，不能写 `color`、`blur` 等 CSS 字段。`BORDER_VISIBILITY` 是原生整数掩码，按实际需求查询默认值；写 false 会规范为 0。要改变聚焦描边，通常用 BORDER_FILL/BORDER_WIDTH 即可。
+
+水平文字对齐直接用 `align`，它同时写入原生段落和 `HORIZONTAL_ALIGNMENT`；不必为 text 控件另写原生覆盖。垂直居中用 `native_style:{"VERTICAL_ALIGNMENT":1}`（0=顶部、1=居中、2=底部），值是整数，不能写 `"center"`。`styles` 的对齐属性会返回 `values` 对照，避免猜枚举名。
+
+填充通常直接用 `fill:"#6D5EF8"`；结构写法 `native_style:{"FILL":{"fill-color":"#6D5EF8"}}` 也接受十六进制色。当前未封装渐变色标，不能只把 `fill-type` 写成 `linear` 就当作完整渐变。氛围光可按需要组合透明填充、圆角矩形和阴影；越界装饰放在固定大小的 panel 状态内裁剪，避免扩大手机画面。先在工作 spec 中使用已支持的效果，不为同类装饰重复搭建试验工程；只有明确要求精细检查时才截图并根据结果调整。
 
 未知样式先查询其模板，不通过反复生成工程试字段：
 
@@ -166,6 +170,8 @@ CLI 成功和失败都返回 `elapsed_seconds`，用于区分本机命令耗时�
 工程及伴随文件不覆盖；HTML 目录必须是新目录。临时 staging 在成功/失败后清理。API 缺失时仍做原生回读，但不能声称经过官方独立验证。渲染目录中的同名 PNG 会更新，使用本次专用目录。
 
 ## 页面演示对齐检查
+
+仅在用户明确要求检查演示布局或完整验收时执行；默认生成/交付不运行下列测试。检查开关和范围见 [validation.md](validation.md)。
 
 `runtime_test.cjs` 的 step 可指定 `viewport:{"width":1440,"height":1000}` 改变窗口，并用 `page_alignment:"center"` / `"left"` 断言整页的实际浏览器位置及页面能放下时无水平溢出。可增加 `canvas:"画面背景控件ID"` 直接核对可见画面的边界，避免把 body 的原生负偏移补偿误判为偏左。示例：
 

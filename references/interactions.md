@@ -131,9 +131,11 @@ python scripts/axure_skill.py models --enum Axure.Constants.IxEventType
  "info_model":"SetOpacityInfo","info":{"Opacity":{"$expr":50}}}
 ```
 
-也可省略 info_model 并用 fields 配置 action 自身。字段必须存在，模型名称必须在已导出白名单内。值可为标量、原生结构；`{"$expr":...}` 创建表达式引用，`{"$widget_path":"id"}` 创建控件路径引用。此入口尚不自动构造任意引用列表、图片资源、Adaptive Views 或母版依赖。扩展后必须新建输出、官方加载、HTML 导出和执行受影响流程，不能仅凭模型名承诺成功。
+也可省略 info_model 并用 fields 配置 action 自身。字段必须存在，模型名称必须在已导出白名单内。值可为标量、原生结构；`{"$expr":...}` 创建表达式引用，`{"$widget_path":"id"}` 创建控件路径引用。此入口尚不自动构造任意引用列表、图片资源、Adaptive Views 或母版依赖。扩展后另存新输出；只有用户明确要求检查时，才按检查范围执行官方加载或受影响流程。未运行验证时如实说明，不能仅凭模型名承诺效果已验证。
 
 ## 真实 HTML 运行测试
+
+仅在用户明确要求测试、检查或验收时使用本节；默认生成 RP/HTML 不编写测试计划、不调用本脚本或浏览器探测。根据用户指定的视觉/交互范围检查，见 [validation.md](validation.md)。
 
 `scripts/runtime_test.cjs` 使用 Playwright 无头 Chromium 和退出即关闭的本机回环 HTTP 服务。安装 Node/Playwright/浏览器仅在运行此测试时需要；生成 RP/HTML 无此依赖。本机配置见 setup 文档。
 
@@ -146,14 +148,16 @@ node scripts/runtime_test.cjs 'C:\path\prototype-html' examples/advanced.test.js
 
 测试计划结构为 `{"steps":[...]}`，可指定 viewport。step 支持 open（页面名）、click、hover、target、fill、text/texts、visible、value、checked、disabled、options、url、style（CSS computed style）、visual_style（内部 _div 样式）、rotation（角度）、focused、wait（毫秒）、screenshot。`visible` 会等待显隐完成（默认最多 8 秒），避免异步动作尚未结束就误报失败；无需为正常显隐手写固定 sleep。fill 前在浏览器内点击输入框，以触发 Axure 提示清除逻辑。页面脚本错误将使测试失败。
 
-`screenshot:true` 保留原行为，写入命令的预览 PNG 参数；`screenshot:"相对路径.png"` 保存到测试计划所在目录下的指定位置。同一次运行可以保存多个页面/状态/视口截图，JSON 报告的 `screenshots` 列出实际文件。例如：
+`screenshot:true` 保留原行为，写入命令的预览 PNG 参数；`screenshot:"相对路径.png"` 保存到测试计划所在目录下的指定位置。同一次运行可以保存多个页面/状态/视口截图，JSON 报告的 `screenshots` 列出实际文件。默认截整页；同一步加 `screenshot_target:"画面面板ID"` 可直接截取该控件的可见区域，适用于手机画面，省去另写裁剪脚本。目标必须唯一且可见。局部截图不代替溢出/居中检查，宽屏布局继续使用 `page_alignment` 和 `canvas` 断言。例如：
 
 ```json
 {"viewport":{"width":390,"height":844},"steps":[
-  {"open":"登录","screenshot":"screenshots/login-phone.png"},
+  {"open":"登录","screenshot":"screenshots/login-phone.png","screenshot_target":"screen"},
   {"viewport":{"width":1440,"height":1000},"page_alignment":"center","screenshot":"screenshots/login-wide.png"},
   {"click":"submit","target":"error","visible":true,"screenshot":"screenshots/login-error.png"}
 ]}
 ```
+
+上例 `screen` 为原型中固定 390×844 的画面 panel ID，替换成实际控件名；没有该容器时省略 `screenshot_target`。等待 toast 消失等异步状态可直接断言 `visible:false`；`wait` 只用于确有展示时间要求的检查，避免在每次回归中重复等待多余固定时长。
 
 stdout 是 JSON 报告，stderr 显示当前步骤；保存报告作为执行证据。该测试操作无头浏览器 DOM，不使用桌面输入。示例 test 计划必须与对应 spec 一起使用。

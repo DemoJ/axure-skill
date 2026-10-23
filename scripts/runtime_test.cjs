@@ -88,7 +88,13 @@ if(process.argv[2]==='--doctor'){
         }
       }
       const shot=typeof step.screenshot==='string'?path.resolve(path.dirname(planPath),step.screenshot):step.screenshot&&screenshot;
-      if(shot){fs.mkdirSync(path.dirname(shot),{recursive:true});await page.screenshot({path:shot,fullPage:true});screenshots.push(shot);}
+      if(shot){
+        fs.mkdirSync(path.dirname(shot),{recursive:true});
+        if(step.screenshot_target){
+          await page.locator('[data-label='+JSON.stringify(step.screenshot_target)+']').screenshot({path:shot});
+        }else await page.screenshot({path:shot,fullPage:true});
+        screenshots.push(shot);
+      }
       checks.push(step.name||JSON.stringify(step));
     }
     assert.deepEqual(errors,[],'JavaScript runtime errors');

@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import struct
 import sys
 import tempfile
 import unittest
@@ -35,15 +36,28 @@ class AuthoringValidationTests(unittest.TestCase):
 
 @unittest.skipUnless(os.environ.get('AXURE_NATIVE_TESTS') == '1', 'Set AXURE_NATIVE_TESTS=1 on an RP9 host')
 class NativeAuthoringTests(unittest.TestCase):
+    def test_invalid_style_identifies_the_property_and_lookup_command(self):
+        install = Path(os.environ.get('AXURE9_DIR', a.DEFAULT_INSTALL))
+        spec = {'pages': [{'id': 'home', 'name': 'Home', 'widgets': [
+            {'id': 'title', 'kind': 'text', 'x': 525, 'y': 20, 'width': 300, 'height': 40,
+             'text': 'Title', 'native_style': {'VERTICAL_ALIGNMENT': 'center'}}]}]}
+        with tempfile.TemporaryDirectory(prefix='axure-invalid-style-') as temporary:
+            output = Path(temporary).resolve() / 'invalid.rp'
+            with self.assertRaisesRegex(ValueError, r'Style VERTICAL_ALIGNMENT:.*styles --property VERTICAL_ALIGNMENT'):
+                a.create(spec, output, install)
+            self.assertFalse(output.exists())
+
     def test_focused_border_mask_and_delayed_visibility_with_named_screenshots(self):
         from style_info import style_info
         install = Path(os.environ.get('AXURE9_DIR', a.DEFAULT_INSTALL))
         shadow = style_info(a, install, 'OUTER_SHADOW')['properties']['OUTER_SHADOW']
         self.assertIn('Color', shadow['fields'])
         self.assertIn('BlurRadius', shadow['fields'])
+        alignment = style_info(a, install, 'VERTICAL_ALIGNMENT')['properties']['VERTICAL_ALIGNMENT']
+        self.assertEqual(alignment['values']['middle'], 1)
         spec = {'pages': [{'id': 'home', 'name': 'Home', 'widgets': [
             {'id': 'trigger', 'kind': 'button', 'x': 525, 'y': 20, 'width': 160, 'height': 40,
-             'text': 'Open', 'native_style': {'CORNER_RADIUS': 16,
+             'text': 'Open', 'native_style': {'CORNER_RADIUS': 16, 'FILL': {'fill-color': '#6D5EF8'},
                  'OUTER_SHADOW': {'On': True, 'OffsetY': 8, 'BlurRadius': 24, 'Color': '#16000000'}},
              'events': {'OnClick': [{'type': 'wait', 'ms': 180}, {'type': 'show', 'target': 'panel'}]}},
             {'id': 'panel', 'kind': 'panel', 'x': 525, 'y': 80, 'width': 300, 'height': 120,
@@ -61,7 +75,8 @@ class NativeAuthoringTests(unittest.TestCase):
             if probe.returncode:
                 self.skipTest('Native checks passed; Playwright/Chromium unavailable')
             plan = {'steps': [{'open': 'Home', 'target': 'panel', 'visible': False},
-                              {'click': 'trigger', 'target': 'panel', 'visible': True, 'screenshot': 'shots/phone.png'},
+                              {'click': 'trigger', 'target': 'panel', 'visible': True,
+                               'screenshot': 'shots/phone.png', 'screenshot_target': 'panel'},
                               {'viewport': {'width': 1440, 'height': 900}, 'screenshot': 'shots/desktop.png'}]}
             a.write(folder / 'plan.json', plan)
             run = subprocess.run([node, str(ROOT / 'scripts/runtime_test.cjs'), str(folder / 'html'), str(folder / 'plan.json')],
@@ -70,6 +85,8 @@ class NativeAuthoringTests(unittest.TestCase):
             report = json.loads(run.stdout)
             self.assertEqual(len(report['screenshots']), 2)
             self.assertTrue(all(Path(p).is_file() for p in report['screenshots']))
+            header = (folder / 'shots/phone.png').read_bytes()[:24]
+            self.assertEqual(struct.unpack('>II', header[16:24]), (300, 120))
 
 
 if __name__ == '__main__':

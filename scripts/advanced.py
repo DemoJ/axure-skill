@@ -219,17 +219,23 @@ class NativeCompiler:
                 raise ValueError('No native value template for style property: ' + name)
             prop = copy.deepcopy(self.props[code])
             target = get(prop, 'Value')
-            if isinstance(val, str) and val.startswith('#') and field(target, 'ebL0'):
-                set_value(get(target, 'fill-color'), self.a.argb(val))
-            elif isinstance(val, dict):
-                for key, child in val.items():
-                    node = get(target, key)
-                    if node is None: raise ValueError('Unknown structured style field: ' + name + '.' + key)
-                    if key == 'Color' and isinstance(child, str) and child.startswith('#'):
-                        child = self.a.argb(child)
-                    set_value(node, child)
-            else:
-                set_value(target, val)
+            location = name
+            try:
+                if isinstance(val, str) and val.startswith('#') and field(target, 'ebL0'):
+                    set_value(get(target, 'fill-color'), self.a.argb(val))
+                elif isinstance(val, dict):
+                    for key, child in val.items():
+                        location = name + '.' + key
+                        node = get(target, key)
+                        if node is None: raise ValueError('Unknown structured style field: ' + location)
+                        if key in ('Color', 'fill-color') and isinstance(child, str) and child.startswith('#'):
+                            child = self.a.argb(child)
+                        set_value(node, child)
+                else:
+                    set_value(target, val)
+            except (ValueError, TypeError) as error:
+                raise ValueError('Style ' + location + ': ' + str(error)
+                                 + '; query styles --property ' + name) from error
             self.a.style_prop(style, code, target, prop)
 
     def add_states(self, owner_doc, widget, spec, page_id, owner_stem):

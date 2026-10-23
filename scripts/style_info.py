@@ -2,8 +2,14 @@
 from model import field, get, items, rtype, value
 
 
-COMMON_STYLES = ('CORNER_RADIUS', 'OUTER_SHADOW', 'FILL', 'BORDER_FILL',
+COMMON_STYLES = ('CORNER_RADIUS', 'HORIZONTAL_ALIGNMENT', 'VERTICAL_ALIGNMENT',
+                 'OUTER_SHADOW', 'INNER_SHADOW', 'FILL', 'BORDER_FILL',
                  'BORDER_WIDTH', 'BORDER_VISIBILITY', 'OPACITY')
+
+STYLE_VALUES = {
+    'HORIZONTAL_ALIGNMENT': {'left': 0, 'center': 1, 'right': 2},
+    'VERTICAL_ALIGNMENT': {'top': 0, 'middle': 1, 'bottom': 2},
+}
 
 
 def describe(node):
@@ -38,4 +44,6 @@ def style_info(api, install, name=None):
                 raise ValueError('No native value template for style property: ' + prop_name)
             continue
         result[prop_name] = describe(node)
+        if prop_name in STYLE_VALUES:
+            result[prop_name]['values'] = STYLE_VALUES[prop_name]
     return {'ok': True, 'properties': result}

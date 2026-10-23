@@ -253,7 +253,8 @@ def modify_widget(doc, widget, spec, property_templates, rich_template):
     for key, code, transform in [('font_size', -1073741822, lambda v: v * .75),
                                  ('font_family', -1073741823, lambda v: v),
                                  ('bold', -1073740823, lambda v: 700 if v else 400),
-                                 ('align', -1073741821, lambda v: {'left': 0, 'center': 1, 'right': 2}[v])]:
+                                 # PName.HORIZONTAL_ALIGNMENT=9; 3 is BOLD.
+                                 ('align', -1073741815, lambda v: {'left': 0, 'center': 1, 'right': 2}[v])]:
         if key in spec:
             style_prop(style, code, transform(spec[key]), property_templates[code])
     if 'color' in spec:

@@ -22,15 +22,15 @@
 
 ## OpenCode 中的常规绘制
 
-使用加载时返回的 skill 根目录调用 CLI，不需要为普通页面先阅读桥接源码或扫描整个缓存。样式参数用 `styles --property OUTER_SHADOW` 等命令查询，常用写法见 spec 的外观速查。`create` 已包含原生回读校验；成功后先给出 RP 路径，HTML 测试可在同一计划中保存多张截图。
+使用加载时返回的 skill 根目录调用 CLI，不需要为普通页面先阅读桥接源码或扫描整个缓存。样式参数用 `styles --property OUTER_SHADOW` 等命令查询，常用写法见 spec 的外观速查。`create` 已包含原生回读校验；成功后给出 RP 路径，导出所需 HTML 并交付。默认不做截图、浏览器测试或多轮视觉微调；只有用户明确要求检查/测试/验收时才按范围执行，“精美”“可交互”不自动开启检查，见 [validation.md](validation.md)。
 
-Playwright/Chromium 只在运行 HTML 检查时需要，先用 `runtime_test.cjs --doctor` 检查现有安装；缺少官方 API 时跳过可选 `verify`。CLI 的 `elapsed_seconds` 只计本地执行，宿主显示的整轮耗时还包含模型等待、生成和结果检查。更新 skill 后，新会话重新加载；进行中的会话应重新读取已更新的 SKILL.md，避免继续遵从先前注入的旧说明。
+Playwright/Chromium 只在明确开启 HTML 检查时需要，开启后再用 `runtime_test.cjs --doctor` 检查现有安装；默认不探测或安装。缺少官方 API 时跳过可选 `verify`。CLI 的 `elapsed_seconds` 只计本地执行，宿主显示的整轮耗时还包含模型等待、生成和结果检查。更新 skill 后，新会话重新加载；进行中的会话应重新读取已更新的 SKILL.md，避免继续遵从先前注入的旧说明。
 
 ## 没有 skill 加载器，但有文件和命令工具的 Agent
 
 不需要转换成厂商专有配置。把本目录放在任意可访问的位置，给 Agent 以下指令，并替换真实路径：
 
-> 读取 `D:/AgentSkills/axure-skill/SKILL.md` 并使用该工作流制作 Axure 原型。所有 scripts、references、examples 路径相对于此文件所在目录解析。使用本机 Windows 的文件及终端工具执行 Python CLI，先运行 doctor。根据需求写 JSON spec，生成可编辑 RP 并导出 HTML；按需执行交互检查。不要用桌面鼠标键盘自动化替代这些接口。
+> 读取 `D:/AgentSkills/axure-skill/SKILL.md` 并使用该工作流制作 Axure 原型。所有 scripts、references、examples 路径相对于此文件所在目录解析。使用本机 Windows 的文件及终端工具执行 Python CLI，先运行 doctor。根据需求写 JSON spec，生成可编辑 RP 并导出 HTML 后交付；仅在我明确要求检查/测试/验收时执行精细检查。不要用桌面鼠标键盘自动化替代这些接口。
 
 宿主可将这段路径提示写进自己的项目指令，但不要默认向用户的 CLAUDE.md、AGENTS.md、rules 或全局配置中追加内容。
 

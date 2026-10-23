@@ -27,11 +27,19 @@ CLI 的 stdout 是 JSON，成功时含 `ok:true` 和 `elapsed_seconds`；失败�
 
 `doctor` 检查准确的 Axure 二进制 SHA256；版本不符时报告限制，不绕过检查。依赖问题读 [references/setup.md](references/setup.md)。此适配器不是 RP10/11 通用接口。
 
+## 默认交付与可选检查
+
+默认完成设计、生成 `.rp`、导出可交互 HTML 并交付；用户只要 RP 时省略 HTML。**只有用户明确要求对原型进行检查、测试、验收、验证或截图核对时，才执行精细检查。**“精美”“高保真”“可交互”“提供预览”描述的是交付要求，不自动开启检查。
+
+未开启时，不编写或运行测试计划，不为验收调用浏览器/截图工具，不检查或安装 Playwright/Chromium，不制作视觉探针，不进行多轮截图微调。用户要求打开预览时可打开，不因此追加自动验收。照常按用户要求做好布局、样式和原生交互；生成报错时根据具体错误修复。保留 CLI 内置的格式校验、原生保存/回读及可用时的语义核验，它们确保文件有效，不是可选的精细检查。
+
+生成成功即交付文件路径，简要说明“未运行可选精细检查”，不声称视觉或交互已经验收，也不追加询问是否需要检查。用户随后要求检查时，沿用已生成工程继续，按指定范围执行；具体流程见 [references/validation.md](references/validation.md)，未开启检查时无需读取。
+
 ## 创建与交互
 
 普通绘制按公开 spec/CLI 工作，不需要先阅读 `scripts/` 源码、扫描缓存或查询全量原生枚举。先读 spec；有交互再读 interactions。常用圆角、阴影和交互样式的可用写法见 spec 的「外观速查」，需要其他样式时运行 `styles --property 属性名`，直接获得字段名、类型和默认值。只有需求确实超出现有接口时才研究原生扩展。
 
-按用户要求确定页面范围与精细程度；一个登录页可用面板表达切换、错误和成功状态，不自动扩展工作台等业务页面。需要重复控件时可用短 Python 生成 spec，复用样式字典和布局函数，避免手写大量重复 JSON。用户要求精美时保留视觉设计与检查，优先使用已支持的样式能力。
+按用户要求确定页面范围与精细程度；一个登录页可用面板表达切换、错误和成功状态，不自动扩展工作台等业务页面。需要重复控件时可用短 Python 生成 spec，复用样式字典和布局函数，避免手写大量重复 JSON。用户要求精美时认真设计视觉，优先使用已支持的样式能力，将主要视觉方案落实到工作 spec。不要自行增加“纯 CSS、零图片”等实现目标并为此反复制作独立探针。
 
 1. 按 [references/spec.md](references/spec.md) 写 UTF-8 JSON spec，使用稳定的页面/控件 ID。绘制新原型时同时安排**原生编辑布局**：固定宽度画面默认在 1440px 参考编辑区内水平居中，并在两侧至少留 160px；390px 移动端画面从 x=525 开始，宽页面可扩大参考编辑区。它是实际控件坐标安排，不是假定存在有限画板，也不只设置浏览器对齐；用户指定坐标时遵从用户。工程默认同时使用 Axure 原生 `page_alignment:"center"`，单页可覆盖为 `left`。原生编辑留白和演示的具体约束见 spec 文档。涉及事件、面板或数据时再读 [references/interactions.md](references/interactions.md)。简单布局参考 `examples/login.json`，复杂原型参考 `examples/advanced.json`，表单/动作/状态样式参考 `examples/controls.json`。
 2. 在用户工作区选择新输出路径，先生成可打开的原生工程：
@@ -41,17 +49,13 @@ python "$axureSkill\scripts\axure_skill.py" create --spec 'C:\path\design.json' 
 python "$axureSkill\scripts\axure_skill.py" export-html 'C:\path\prototype.rp' --output 'C:\path\prototype-html'
 ```
 
-`create` 成功后即可在进度消息给出 `.rp` 路径并继续验收，不必等截图和说明文件写完才告知文件已生成。它已执行原生保存/回读核验；不为同一次构建重复调用 `inspect` 或无渲染的 `verify`。只有需要独立 API 核验/原生 PNG 且 `doctor.official_read_api:true` 时，再运行 `verify FILE --render-dir DIR`；API 缺失不阻塞 RP/HTML 交付，也不为普通绘制自动下载它。
+`create` 成功后先给出 `.rp` 路径，再导出 HTML 并交付；仅开启检查时继续验收。它已执行原生保存/回读核验；不为同一次构建重复调用 `inspect` 或 `verify`。API 缺失不阻塞 RP/HTML 交付，也不为普通绘制自动下载它。
 
-3. 检查真实视觉结果。固定宽度原型检查目标手机/页面宽度及桌面宽屏下的 HTML，确认整体居中、同宽时无意外水平滚动；用户实际使用 Axure 播放器时再检查其内容区。原生居中导出会消除正的起始 x 偏移，不要用额外背景或占位控件撑出编辑区。对交互原型，使用一次配套测试计划覆盖关键路径并在同一次浏览器运行中保存各状态截图；先汇总问题再集中修复，修复后复查受影响流程和画面。检查通过后交付 `.rp`、预览和真实验证结果，不以新增业务页或重复全量截图代替视觉完善。
+3. 交付 `.rp`、HTML 目录及简要使用说明。默认到此结束；用户明确要求检查时，再按 [可选精细检查流程](references/validation.md) 执行并报告实际结果。
 
-无头检查前用 `node "$axureSkill\scripts\runtime_test.cjs" --doctor` 查询已有 Playwright/Chromium，生成 RP 无需这些依赖，不要先重复安装浏览器。测试 step 的 `screenshot:"screenshots/login-phone.png"` 可直接保存多张截图，路径相对测试计划；无需另写 shots/capture 脚本。用法见 interactions 文档。测试仅使用浏览器内部输入，不移动桌面鼠标。
-
-`create` 会做原生保存/回读，核对面板内和中继器项内的控件文字、保存坐标及数据；官方 API 可用时再核对页面、面板状态中的控件和字体。它不能代替交互运行测试。旁边保留 `.spec.json`、`.manifest.json`、`.verification.json` 方便迭代。
+`create` 会做原生保存/回读，核对面板内和中继器项内的控件文字、保存坐标及数据；官方 API 可用时再核对页面、面板状态中的控件和字体。它不能代替交互运行测试。旁边保留 `.spec.json`、`.manifest.json` 及生成时实际输出的 `.verification.json` 方便迭代。
 
 遇到错误根据具体字段修复：`target` 是单个 ID，多目标用 `targets`；原生样式字段和类型用 `styles` 查。回读不一致会给出 package、字段路径和期望/实际值；不要将相同输入反复重试或用大量控件组合试验猜测原因。实际需要扩展桥接时再进入维护流程。
-
-**官方 API 的整页 PNG 会漏画动态面板内容**；单独状态 PNG 可以显示该状态。完整复杂预览使用真实 HTML 的无头浏览器截图，不能把空白区域当作工程正常的证据。
 
 HTML 导出在临时工程副本中执行，完成时阻止生成器自动打开浏览器。返回 `browser_opened:false`、`source_unchanged:true`；输出目录必须是新的。导出超时会停止独立辅助进程，不继续反复重试。不使用旧研究用的 HtmlProbe 程序。
 
@@ -64,7 +68,7 @@ python "$axureSkill\scripts\axure_skill.py" inspect 'C:\path\source.rp'
 python "$axureSkill\scripts\axure_skill.py" edit --input 'C:\path\source.rp' --patch 'C:\path\changes.json' --output 'C:\path\revised.rp'
 ```
 
-Patch 可修改文字、位置、样式，也可替换控件的完整 `events`；`events:{}` 清除交互。支持递归定位面板状态内控件和中继器项。选择器有歧义时用 GUID，同一控件的改动合并为一条 update。示例见 `examples/advanced.edit.json`。复杂编辑后重新导出并测试受影响流程。
+Patch 可修改文字、位置、样式，也可替换控件的完整 `events`；`events:{}` 清除交互。支持递归定位面板状态内控件和中继器项。选择器有歧义时用 GUID，同一控件的改动合并为一条 update。示例见 `examples/advanced.edit.json`。需要 HTML 时重新导出；仅用户明确要求检查时测试受影响流程。
 
 旧原型的演示对齐用页面级 patch：`{"page_updates":[{"page":"首页","set":{"page_alignment":"center"}}]}`，无需移动控件或重建页面。未指定的页面对齐保持原值。`inspect` 返回每页实际继承后的 `page_alignment`。应修改原生设置后重新导出，不用改 HTML CSS 或额外包裹页面来代替。
 
@@ -76,6 +80,6 @@ Patch 可修改文字、位置、样式，也可替换控件的完整 `events`�
 
 查看 [references/capabilities.md](references/capabilities.md) 区分已实际执行、仅有原生封装、尚未支持的功能。不能宣称全功能已覆盖，也不要遇到缺项就退回一张静态图。
 
-未封装动作可通过 `models` 查询本机真实模型/枚举，用 `native` 动作、原生表达式和属性扩展。必须补齐原生引用关系，并验证输出与真实运行；导出成功本身不证明交互正确。母版、Adaptive Views、自定义图片源及 table/tree/menu 内容、团队工程尚无完整高层接口。
+未封装动作可通过 `models` 查询本机真实模型/枚举，用 `native` 动作、原生表达式和属性扩展。必须补齐原生引用关系；未做精细检查时如实说明该扩展效果尚未运行验证，不能将导出成功称为交互正确。母版、Adaptive Views、自定义图片源及 table/tree/menu 内容、团队工程尚无完整高层接口。
 
-维护桥接或编译器后运行 `scripts/smoke_test.py`；交互改动运行相应 examples 测试计划。实现证据与关键原生约束见 [references/research.md](references/research.md)。
+维护 skill 的桥接或编译器代码后运行 `scripts/smoke_test.py`，编译器交互实现变更运行相应 examples 测试计划；这是技能维护验证，与普通原型的可选精细检查分开。实现证据与关键原生约束见 [references/research.md](references/research.md)。
