@@ -1,0 +1,24 @@
+{
+  "title": "页面演示对齐回归",
+  "pages": [
+    {
+      "id": "default", "name": "default",
+      "widgets": [
+        {"id": "canvas", "kind": "rect", "x": 525, "y": 0, "width": 390, "height": 844, "fill": "#F3F0E8", "border_width": 0},
+        {"id": "heading", "kind": "text", "x": 549, "y": 40, "width": 342, "height": 48, "text": "默认水平居中", "align": "left", "font_size": 24}
+      ]
+    },
+    {
+      "id": "left", "name": "left", "page_alignment": "left",
+      "widgets": [
+        {"id": "canvas", "kind": "rect", "x": 0, "y": 0, "width": 390, "height": 844, "fill": "#F3F0E8", "border_width": 0}
+      ]
+    },
+    {
+      "id": "center", "name": "center", "page_alignment": "center",
+      "widgets": [
+        {"id": "canvas", "kind": "rect", "x": 525, "y": 0, "width": 390, "height": 844, "fill": "#F3F0E8", "border_width": 0}
+      ]
+    }
+  ]
+}

@@ -29,6 +29,7 @@ const http=require('http'),fs=require('fs'),path=require('path');
     const base='http://127.0.0.1:'+server.address().port+'/';
     for(const step of plan.steps){
       process.stderr.write('Checking: '+(step.name||step.target||step.open)+'\n');
+      if(step.viewport)await page.setViewportSize(step.viewport);
       const locator=step.target?page.locator('[data-label='+JSON.stringify(step.target)+']'):null;
       if(step.open)await page.goto(base+encodeURIComponent(step.open)+'.html');
       if(step.click)await page.locator('[data-label='+JSON.stringify(step.click)+']').click();
@@ -52,6 +53,26 @@ const http=require('http'),fs=require('fs'),path=require('path');
       if(step.rotation!==undefined){
         const rotation=await locator.evaluate(el=>{const m=new DOMMatrixReadOnly(getComputedStyle(el).transform);return Math.atan2(m.b,m.a)*180/Math.PI;});
         assert.ok(Math.abs(rotation-step.rotation)<0.01,'Rotation of '+step.target+': '+rotation);
+      }
+      if(step.page_alignment){
+        assert.ok(['left','center'].includes(step.page_alignment),'Unknown page alignment');
+        const geometry=await page.evaluate(()=>{
+          const body=document.body.getBoundingClientRect();
+          const style=getComputedStyle(document.body);
+          // RP9 trims a positive canvas origin using a negative relative left.
+          // Measure the exported content origin, not that compensating body box.
+          const offset=style.position==='relative'?(parseFloat(style.left)||0):0;
+          return {x:body.x-offset,width:body.width,viewport:document.documentElement.clientWidth,scrollWidth:document.documentElement.scrollWidth};
+        });
+        const expected=step.page_alignment==='center'?Math.max(0,(geometry.viewport-geometry.width)/2):0;
+        assert.ok(Math.abs(geometry.x-expected)<=1,'Page alignment '+step.page_alignment+': '+JSON.stringify(geometry));
+        if(geometry.width<=geometry.viewport)assert.ok(geometry.scrollWidth<=geometry.viewport+1,'Unexpected horizontal overflow');
+        if(step.canvas){
+          const canvas=await page.locator('[data-label='+JSON.stringify(step.canvas)+']').boundingBox();
+          assert.ok(canvas,'Canvas must be visible');
+          const canvasX=step.page_alignment==='center'?Math.max(0,(geometry.viewport-canvas.width)/2):0;
+          assert.ok(Math.abs(canvas.x-canvasX)<=1,'Visible canvas alignment: '+JSON.stringify(canvas));
+        }
       }
       if(step.screenshot&&screenshot){fs.mkdirSync(path.dirname(screenshot),{recursive:true});await page.screenshot({path:screenshot,fullPage:true});}
       checks.push(step.name||JSON.stringify(step));

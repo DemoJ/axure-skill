@@ -15,6 +15,7 @@ An agent-independent skill following the Agent Skills format. Create and edit na
 - 设置位置、尺寸、透明度、旋转、聚焦、勾选、禁用与交互样式。
 - 读取现有工程，修改面板内部控件和控件事件，另存为新 `.rp`。
 - 调用 Axure 自身的 HTML 生成器，导出真实交互原型，阻止生成后自动打开浏览器。
+- 绘制时默认在参考编辑区中央摆放固定宽度画面，左右留出调整与批注空间；新工程自动打开首个页面，演示默认水平居中。
 
 开发环境已执行 26 步 HTML 运行检查，覆盖主交互示例、控件动作和已有工程修改；测试计划包含在 `examples/` 中。适配器仍未覆盖 Axure 全部功能，母版、Adaptive Views、自定义图片资源、完整 table/tree/menu 数据及团队工程等尚无完整高层接口。详见 [能力与验证范围](references/capabilities.md)。
 
@@ -93,6 +94,10 @@ python "$skill\scripts\axure_skill.py" edit --input .\outputs\advanced.rp --patc
 ```
 
 `.rp` 可以在 Axure 中继续编辑。HTML 输出目录应完整保留，入口是 `start.html`；无头运行检查会自行启动临时本机 HTTP 服务。生成工程及伴随文件不覆盖已有结果，HTML 输出目录必须是新目录；重复运行请更换名称。
+
+新原型默认整页水平居中，控件坐标和文字对齐保持设计值。需要左对齐时，在 spec 工程级或单页写 `"page_alignment":"left"`。已有原型用 `{"page_updates":[{"page":"页面名","set":{"page_alignment":"center"}}]}` 调用 `edit`，再重新导出即可；详细格式和宽屏/手机回归见 [spec 文档](references/spec.md#页面演示对齐检查)。
+
+原生编辑布局需在绘制 spec 时安排实际坐标：默认以 1440px 为参考，390px 移动端画面放在 x=525，左右各有 525px 空间；面板内部保持相对坐标。原生居中导出自动消除这个起始 x 偏移，手机演示仍为 390px。单改 `page_alignment` 不会改变编辑画布中的位置，完整约束见 [原生编辑布局与演示布局](references/spec.md#原生编辑布局与演示布局)。
 
 ## 官方核验和预览
 

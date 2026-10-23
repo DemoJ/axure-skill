@@ -7,6 +7,7 @@
 ```json
 {
   "title":"订单原型",
+  "page_alignment":"center",
   "variables":{"UserName":"访客"},
   "pages":[{
     "id":"home", "name":"首页",
@@ -19,6 +20,18 @@
 ```
 
 `pages` 必须非空，页面 `id` 唯一，`name` 非空，`widgets` 为列表。`title` 为可选标签。`variables` 为名称到标量默认值的映射；Axure 全局变量以字符串保存，数字会转换为文本。页面顺序决定 sitemap 顺序，控件按从底到顶排列。用底层矩形定义需要的画面范围；Axure 本身仍为无限画布。
+
+`page_alignment` 控制浏览器中整页的水平位置，仅接受 `center` / `left`，工程级省略时默认 `center`；单页同名字段可覆盖工程值。它写入原生 `PageStyle.PAGE_ALIGNMENT`，在 Axure 中继续导出也有效，和控件的 `align`（文字对齐）独立。页面仍顶部对齐，控件 x/y 不变；窗口小于页面时左边缘可访问，超宽内容可水平滚动，不会自动缩小为响应式布局。
+
+### 原生编辑布局与演示布局
+
+Axure 的无限编辑画布和浏览器演示是两件事。`page_alignment` 只影响演示，不会把原生控件移到编辑区中央。新绘制的固定宽度原型默认采用 1440px 参考编辑区，画面左右至少留 160px；若画面更宽，将参考区扩大到至少画面宽度+320px。画面宽为 W 时，其左边界取 `(参考宽度-W)/2`；390px 移动端即 x=525，背景范围为 x=525..915。参考区只是布局基准，不是有限画板字段；不要编造 `canvas_width` 等 spec 属性。
+
+页面级控件使用真实页面坐标，例如手机号框原来在画面内 x=24，就保存为 x=549。动态面板本身放到 x=525 后，其状态内控件仍使用原来的局部坐标。隐藏的页面级弹层使用同一偏移；页面坐标系下的绝对移动目标值/表达式也要同步，面板内的相对动作不变。示例见 `examples/presentation.json`。y 坐标保留设计值，水平编辑留白不要求增加演示顶部空白。
+
+原生 `center` 导出按内容范围消除正的起始 x 偏移，生成的 body 可为 `left:-525px;width:390px;margin-left:auto;margin-right:auto`。因此原生编辑区可保留左右空间，手机 HTML 仍是 390px 宽；不要将 body 的负补偿值误判为内容偏左。不要增加空白占位或巨大背景来撑编辑区。普通文本批注也会参与导出范围，使用 Axure 原生说明可避免扩大移动端画面。
+
+直接页面和 `start.html` 播放器分别在自身可用内容区居中；播放器侧栏会占用一部分宽度。`left` 演示保留页面坐标里的起始空白，若需左对齐演示同时编辑留白，需另行设计，不能假定它也会裁掉起始偏移。新建工程自动打开首个真实页面；编辑器窗口大小、工具栏宽度和用户缩放决定实际屏幕位置，不是固定的显示器像素居中。
 
 控件 `id` 写入 Axure 控件名称，同页所有容器内也必须唯一。原生 GUID 自动生成；`inspect` 可取得真实 GUID。创建时交互引用使用 spec ID；编辑时使用现有名称或 GUID。
 
@@ -86,6 +99,14 @@
 
 ## 修改 patch
 
+单独修复已有原型的演示对齐，可只写 `page_updates`：
+
+```json
+{"page_updates":[{"page":"首页","set":{"page_alignment":"center"}}]}
+```
+
+`page` 接受现有页面名或 GUID，每页只写一条。页面级 `set` 当前仅支持 `page_alignment`。`page_updates` 和控件级 `updates` 可一起使用，至少一个列表非空。页面、控件 GUID、控件布局及交互保留；未指定的页面对齐不变。
+
 ```json
 {
   "updates":[
@@ -104,7 +125,7 @@
 ## CLI 与输出
 
 - `doctor`：版本、hash、安装位置、官方 API 是否存在、ui_automation=false。
-- `inspect FILE`：真实递归结构、GUID、package_stem、文字/bounds、面板状态、中继器数据、全局变量及原生 interaction_records 摘要。
+- `inspect FILE`：真实递归结构、GUID、package_stem、每页有效 page_alignment、文字/bounds、面板状态、中继器数据、全局变量及原生 interaction_records 摘要；editor 包含 initial_page 与 open_pages。
 - `verify FILE --render-dir DIR`：官方语义加载/读取及 PNG。顶层面板另存独立状态 PNG；整页 PNG 会漏画面板，应使用真实 HTML 截图检查复杂原型。
 - `create --spec SPEC --output NEW.rp`：原生工程、spec、manifest、可用时官方 verification；widgets 为顶层数量，widgets_including_containers 包含面板/中继器内控件。
 - `edit --input SOURCE.rp --patch PATCH --output NEW.rp`：新工程、patch、可用时 verification。
@@ -112,3 +133,15 @@
 - `models [--model MODEL | --enum FULL_ENUM_NAME]`：真实模型字段和枚举。
 
 工程及伴随文件不覆盖；HTML 目录必须是新目录。临时 staging 在成功/失败后清理。API 缺失时仍做原生回读，但不能声称经过官方独立验证。渲染目录中的同名 PNG 会更新，使用本次专用目录。
+
+## 页面演示对齐检查
+
+`runtime_test.cjs` 的 step 可指定 `viewport:{"width":1440,"height":1000}` 改变窗口，并用 `page_alignment:"center"` / `"left"` 断言整页的实际浏览器位置及页面能放下时无水平溢出。可增加 `canvas:"画面背景控件ID"` 直接核对可见画面的边界，避免把 body 的原生负偏移补偿误判为偏左。示例：
+
+```powershell
+python "$axureSkill\scripts\axure_skill.py" create --spec "$axureSkill\examples\presentation.json" --output 'C:\path\presentation.rp'
+python "$axureSkill\scripts\axure_skill.py" export-html 'C:\path\presentation.rp' --output 'C:\path\presentation-html'
+node "$axureSkill\scripts\runtime_test.cjs" 'C:\path\presentation-html' "$axureSkill\examples\presentation.test.json"
+```
+
+该计划覆盖原生 x=525 留白布局在桌面宽屏、同宽手机、窄窗口和缩放下的可见画面位置，以及单页覆盖和文字对齐不变。原生创建/编辑回归还核对首屏自动打开和原生保存坐标，可在源码根目录设置 `AXURE_NATIVE_TESTS=1` 后运行 `python -m unittest discover -s tests -p test_page_alignment.py -v`，需要本机 RP9 和可选的 Playwright/Chromium。

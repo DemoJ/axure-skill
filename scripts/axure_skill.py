@@ -21,6 +21,8 @@ EXPECTED_SHA256 = 'f7dcdec8f44f122cf4c7f887655335dc49df159dc01dc981a649f1003b095
 KINDS = {'rect': 'Box 1', 'text': 'Paragraph', 'button': 'Primary Button',
          'input': 'Text Field', 'checkbox': 'Checkbox'}
 KINDS.update(EXTRA_KINDS)
+PAGE_ALIGNMENT = -1073741798  # RP9 PName.PAGE_ALIGNMENT; distinct from text alignment.
+PAGE_ALIGNMENTS = {'left': 0, 'center': 1}
 
 def read(path):
     return json.loads(Path(path).read_text(encoding='utf-8-sig'))
@@ -163,6 +165,30 @@ def style_prop(style, code, new, exemplar=None):
     else:
         set_value(get(item, 'Value'), new)
 
+def alignment_template(design):
+    return next(p for o in design['objects'] if rtype(o) == 'Axure:PageStyle'
+                for p in items(get(o, 'PropList')) if value(get(p, 'DOAName')) == PAGE_ALIGNMENT)
+
+def set_page_alignment(page, alignment, exemplar):
+    if not isinstance(alignment, str) or alignment not in PAGE_ALIGNMENTS:
+        raise ValueError('page_alignment must be left or center.')
+    style = by_id(page)[ref_id(get(root(page), 'page-style'))]
+    style_prop(style, PAGE_ALIGNMENT, PAGE_ALIGNMENTS[alignment], exemplar)
+
+def page_alignment(page, design):
+    mapping = by_id(design)
+    sheet = mapping[ref_id(get(root(design), 'PageStyleSheet'))]
+    default = mapping[ref_id(get(sheet, 'DefaultPageStyle'))]
+    style = by_id(page)[ref_id(get(root(page), 'page-style'))]
+    # Page overrides take precedence over the document's inherited default.
+    for candidate in (style, default):
+        prop = next((p for p in items(get(candidate, 'PropList'))
+                     if value(get(p, 'DOAName')) == PAGE_ALIGNMENT), None)
+        if prop is not None:
+            native = value(get(prop, 'Value'))
+            return next((name for name, code in PAGE_ALIGNMENTS.items() if code == native), native)
+    return 'left'
+
 def bounds(style, spec):
     for code, keys in [(-1073741723, ('X', 'Y')), (-1073741719, ('Width', 'Height'))]:
         p = next(p for p in items(get(style, 'PropList')) if value(get(p, 'DOAName')) == code)
@@ -237,11 +263,13 @@ def modify_widget(doc, widget, spec, property_templates, rich_template):
 def validate_spec(spec):
     if not isinstance(spec, dict):
         raise ValueError('Spec must be a JSON object.')
-    allowed_top = {'title', 'pages', 'variables'}
+    allowed_top = {'title', 'pages', 'variables', 'page_alignment'}
     if set(spec) - allowed_top:
         raise ValueError('Unknown document fields: ' + str(set(spec) - allowed_top))
     if not isinstance(spec.get('pages'), list) or not spec['pages']:
         raise ValueError('pages must be a nonempty list.')
+    if not isinstance(spec.get('page_alignment', 'center'), str) or spec.get('page_alignment', 'center') not in PAGE_ALIGNMENTS:
+        raise ValueError('page_alignment must be left or center.')
     variables = spec.get('variables', {})
     if not isinstance(variables, dict) or any(not isinstance(k, str) or not k or isinstance(v, (dict, list)) or v is None for k, v in variables.items()):
         raise ValueError('variables must map nonempty names to scalar default values.')
@@ -253,8 +281,10 @@ def validate_spec(spec):
     for page in spec['pages']:
         if not isinstance(page, dict) or not isinstance(page.get('widgets'), list):
             raise ValueError('Each page needs a widgets list.')
-        if set(page) - {'id', 'name', 'widgets', 'events'}:
+        if set(page) - {'id', 'name', 'widgets', 'events', 'page_alignment'}:
             raise ValueError('Unsupported page properties.')
+        if not isinstance(page.get('page_alignment', 'center'), str) or page.get('page_alignment', 'center') not in PAGE_ALIGNMENTS:
+            raise ValueError('page_alignment must be left or center.')
         if not isinstance(page.get('id'), str) or not page['id'] or page['id'] in page_ids:
             raise ValueError('Each page needs a unique nonempty id.')
         page_ids.add(page['id'])
@@ -387,6 +417,7 @@ def _create(spec, output, install):
     index = read(library / 'index.json')
     catalogue = locate(library)
     design_stem, design = copy.deepcopy(catalogue['Axure:DesignDocument'][0])
+    alignment_prop = alignment_template(design)
     infos = {value(get(o, 'package-name')): o for o in design['objects'] if rtype(o) == 'Axure:PackageInfo'}
     def template(name):
         pkg = value(field(get(infos[name], 'package-id'), 'nbcv'))
@@ -431,6 +462,8 @@ def _create(spec, output, install):
         page['root'] = ids[page['root']]
         page['package'] = page['root']
         page_root = root(page)
+        alignment = page_spec.get('page_alignment', spec.get('page_alignment', 'center'))
+        set_page_alignment(page, alignment, alignment_prop)
         diagram = by_id(page)[ref_id(get(page_root, 'diagram'))]
         old_widgets = [o for o in page['objects'] if rtype(o).startswith('Axure:DiagramObject:') or rtype(o) == 'Axure:Style']
         old_ids = {oid(o) for o in old_widgets}
@@ -448,7 +481,8 @@ def _create(spec, output, install):
                 if identifier not in cached_ids:
                     cache_styles.append(copy.deepcopy(c))
                     cached_ids.add(identifier)
-        page_manifest = {'id': page_spec['id'], 'name': page_spec['name'], 'guid': page['root'], 'widgets': []}
+        page_manifest = {'id': page_spec['id'], 'name': page_spec['name'], 'guid': page['root'],
+                         'page_alignment': alignment, 'widgets': []}
         compiler.register_page(page_spec, page, stem)
         for wspec in page_spec.get('widgets', []):
             widget = compiler.add_widget(page, diagram, wspec, page_spec['id'], stem)
@@ -490,6 +524,11 @@ def _create(spec, output, install):
     for key in ('selected-tab-package-id', 'selected-tab-object-id'):
         if get(sr, key):
             set_value(get(sr, key), ZERO)
+    # Open the first real page on launch rather than leaving an empty editor.
+    set_value(get(sr, 'selected-tab-package-id'), manifest['pages'][0]['guid'])
+    for list_key, selected_key in [('open-tab-package-ids', 'selected-tab-package-id'),
+                                   ('open-tab-object-ids', 'selected-tab-object-id')]:
+        items(get(sr, list_key)).append(copy.deepcopy(get(sr, selected_key)))
     write(work / (settings_stem + '.json'), settings)
     write(work / (design_stem + '.json'), design)
     write(work / 'index.json', index)
@@ -497,6 +536,8 @@ def _create(spec, output, install):
     # Fresh process + full file parse; verify real output coordinates and text.
     inspected = inspect(output, install)
     for page, actual_page in zip(spec['pages'], inspected['pages']):
+        if actual_page['page_alignment'] != page.get('page_alignment', spec.get('page_alignment', 'center')):
+            raise RuntimeError('Output page alignment mismatch: ' + page['id'])
         actual_by_name = {w['name']: w for w in flatten_widgets(actual_page['widgets'])}
         for requested in spec_widgets(page['widgets']):
             actual = actual_by_name[requested['id']]
@@ -553,8 +594,10 @@ def _edit(file, patch, output, install):
     check_install(install)
     if output.exists() or output.resolve() == file.resolve():
         raise FileExistsError('Use a new output file; edit preserves the source.')
-    if not isinstance(patch, dict) or set(patch) != {'updates'} or not isinstance(patch['updates'], list) or not patch['updates']:
-        raise ValueError('Patch must contain a nonempty updates list.')
+    if (not isinstance(patch, dict) or set(patch) - {'updates', 'page_updates'}
+            or not isinstance(patch.get('updates', []), list) or not isinstance(patch.get('page_updates', []), list)
+            or not (patch.get('updates') or patch.get('page_updates'))):
+        raise ValueError('Patch must contain a nonempty updates or page_updates list.')
     existing = inspect(file, install)
     output = output.resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -590,9 +633,26 @@ def _edit(file, patch, output, install):
     compiler.existing(existing)
     changed = {}
     expected = {}
+    expected_pages = {}
+    for update in patch.get('page_updates', []):
+        if (not isinstance(update, dict) or set(update) != {'page', 'set'}
+                or not isinstance(update['set'], dict) or set(update['set']) != {'page_alignment'}):
+            raise ValueError('Each page update needs page and set:{page_alignment:left|center}.')
+        matches = [p for p in existing['pages'] if p['name'] == update['page'] or p['guid'] == update['page']]
+        if len(matches) != 1:
+            raise ValueError('Page selector is missing or ambiguous.')
+        page = matches[0]
+        if page['guid'] in expected_pages:
+            raise ValueError('Combine changes for one page into a single page update.')
+        stem = page['package_stem']
+        if stem not in compiler.docs:
+            compiler.docs[stem] = read(work / (stem + '.json'))
+        doc = changed.setdefault(stem, compiler.docs[stem])
+        set_page_alignment(doc, update['set']['page_alignment'], alignment_template(library_design))
+        expected_pages[page['guid']] = update['set']['page_alignment']
     allowed = {'x', 'y', 'width', 'height', 'text', 'placeholder', 'password', 'font_size', 'font_family',
                'bold', 'color', 'fill', 'border_color', 'border_width', 'align'}
-    for update in patch['updates']:
+    for update in patch.get('updates', []):
         if not isinstance(update, dict) or set(update) - {'page', 'widget', 'set', 'events'} or not {'page', 'widget'} <= set(update) or not (update.get('set') or 'events' in update) or not isinstance(update.get('set', {}), dict) or set(update.get('set', {})) - allowed:
             raise ValueError('Each update needs page/widget and supported set fields and/or events.')
         matches = [p for p in existing['pages'] if p['name'] == update['page'] or p['guid'] == update['page']]
@@ -631,7 +691,11 @@ def _edit(file, patch, output, install):
     for stem, doc in changed.items():
         write(work / (stem + '.json'), doc)
     result = bridge(install, 'pack', work, output)
-    reread = {w['guid']: w for p in inspect(output, install)['pages'] for w in flatten_widgets(p['widgets'])}
+    inspected = inspect(output, install)
+    for page in inspected['pages']:
+        if page['guid'] in expected_pages and page['page_alignment'] != expected_pages[page['guid']]:
+            raise RuntimeError('Edited page alignment mismatch: ' + str(page['name']))
+    reread = {w['guid']: w for p in inspected['pages'] for w in flatten_widgets(p['widgets'])}
     for guid, spec in expected.items():
         for key in ('x', 'y', 'width', 'height', 'text', 'placeholder', 'password'):
             if key in spec and reread[guid][key] != spec[key]:
@@ -665,6 +729,9 @@ def _inspect(file, install, folder):
     names = {value(field(get(o, 'package-id'), 'nbcv')): value(get(o, 'package-name'))
              for o in design['objects'] if rtype(o) == 'Axure:PackageInfo'}
     result = {'file': str(file), 'document_type': value(get(root(design), 'document-type')), 'pages': [], 'variables': {}}
+    settings = root(found['Axure:DocumentSettings'][0][1])
+    result['editor'] = {'initial_page': value(get(settings, 'selected-tab-package-id')),
+                        'open_pages': [value(p) for p in items(get(settings, 'open-tab-package-ids'))]}
     dm = by_id(design)
     variable_set = next((o for o in design['objects'] if rtype(o) == 'Axure:GlobalVariableSet'), None)
     if variable_set:
@@ -741,7 +808,8 @@ def _inspect(file, install, folder):
             continue
         pguid = str(uuid.UUID(package))
         diagram = by_id(doc)[ref_id(get(root(doc), 'diagram'))]
-        result['pages'].append({'guid': pguid, 'name': names.get(pguid), 'widgets': widgets(doc, diagram, stem)})
+        result['pages'].append({'guid': pguid, 'name': names.get(pguid), 'package_stem': stem,
+                                'page_alignment': page_alignment(doc, design), 'widgets': widgets(doc, diagram, stem)})
     return result
 
 

@@ -44,6 +44,8 @@ RP9 Generate() 末尾会无条件尝试打开浏览器，研究中的早期调�
 
 ## 原生结构中已经验证的约束
 
+- `PName.PAGE_ALIGNMENT` 为 26，对应 `DOAName=-1073741798`，位于 `Axure:PageStyle.PropList`；0=left、1=center。写入每页原生样式，HTML 生成器会输出 relative body 与 auto 左右 margin；这与控件文字的 HORIZONTAL_ALIGNMENT 无关。`inspect` 先读单页样式，再读工程 DefaultPageStyle。回归见 presentation 示例与 tests/test_page_alignment.py。
+- 编辑画面起始 x=525、宽390 且 PAGE_ALIGNMENT=1 时，原生导出 body 为 left:-525px、width:390px，控件仍保留原生 x=525；该补偿消除演示的左侧空白。编辑居中应直接安排原生坐标，不把演示对齐等同于编辑器位置。DocumentSettings 的 open-tab-package-ids/open-tab-object-ids 与 selected-tab-package-id 可保存首个真实页面的打开状态；本机 UI 保存回读验证了这组字段。
 - 所有动态面板状态包（包括深层嵌套）必须平铺在所属 PAGE 的 index.children；设计元数据仍保持嵌套。
 - 初始隐藏要同时设置 VisibleFromSettings 与样式 VISIBLE；只改其中一个会造成运行结果错误。
 - SetPanelStateInfo 的 state-value 即使在指定状态模式也必须是非空表达式对象；RotateInfo 的 OffsetX/OffsetY 同理。

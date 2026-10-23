@@ -1,0 +1,11 @@
+{
+  "viewport": {"width": 1440, "height": 1000},
+  "steps": [
+    {"name": "原生x=525的画布在桌面居中，文字保持左对齐", "open": "default", "page_alignment": "center", "canvas": "canvas", "target": "heading", "style": {"textAlign": "left"}},
+    {"name": "编辑留白不进入同宽手机窗口", "viewport": {"width": 390, "height": 844}, "page_alignment": "center", "canvas": "canvas"},
+    {"name": "更窄窗口左边缘仍可访问", "viewport": {"width": 320, "height": 844}, "page_alignment": "center", "canvas": "canvas"},
+    {"name": "窗口放大后自动恢复居中", "viewport": {"width": 1440, "height": 1000}, "page_alignment": "center", "canvas": "canvas"},
+    {"name": "单页显式左对齐", "open": "left", "page_alignment": "left", "canvas": "canvas"},
+    {"name": "单页显式居中", "open": "center", "page_alignment": "center", "canvas": "canvas"}
+  ]
+}

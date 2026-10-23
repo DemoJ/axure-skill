@@ -16,6 +16,7 @@ node_modules/
 *.zip
 
 # Prototype output, extracted native records and validation reports
+prototypes/
 outputs/
 deliverables/
 *.rp
