@@ -16,6 +16,8 @@ An agent-independent skill following the Agent Skills format. Create and edit na
 - 读取现有工程，修改面板内部控件和控件事件，另存为新 `.rp`。
 - 调用 Axure 自身的 HTML 生成器，导出真实交互原型，阻止生成后自动打开浏览器。
 - 绘制时默认在参考编辑区中央摆放固定宽度画面，左右留出调整与批注空间；新工程自动打开首个页面，演示默认水平居中。
+- `styles` 直接查询原生样式字段/类型，支持圆角、阴影颜色简写；创建成功后即可先取得 RP 文件。
+- HTML 测试等待异步显隐并可一次保存多个状态/视口截图；`--doctor` 检查已有浏览器，避免重复安装。
 
 开发环境已执行 26 步 HTML 运行检查，覆盖主交互示例、控件动作和已有工程修改；测试计划包含在 `examples/` 中。适配器仍未覆盖 Axure 全部功能，母版、Adaptive Views、自定义图片资源、完整 table/tree/menu 数据及团队工程等尚无完整高层接口。详见 [能力与验证范围](references/capabilities.md)。
 
@@ -80,6 +82,9 @@ python "$skill\scripts\axure_skill.py" doctor
 # $env:AXURE9_DIR = 'D:\Apps\Axure RP 9'
 # 或在子命令之前加 --axure-dir 'D:\Apps\Axure RP 9'
 
+# 查询常用样式，避免通过反复生成工程猜测字段
+python "$skill\scripts\axure_skill.py" styles --property OUTER_SHADOW
+
 # 生成复杂交互示例；首次运行会从自己的 Axure 安装中生成本地缓存
 python "$skill\scripts\axure_skill.py" create --spec "$skill\examples\advanced.json" --output .\outputs\advanced.rp
 
@@ -94,6 +99,8 @@ python "$skill\scripts\axure_skill.py" edit --input .\outputs\advanced.rp --patc
 ```
 
 `.rp` 可以在 Axure 中继续编辑。HTML 输出目录应完整保留，入口是 `start.html`；无头运行检查会自行启动临时本机 HTTP 服务。生成工程及伴随文件不覆盖已有结果，HTML 输出目录必须是新目录；重复运行请更换名称。
+
+CLI 结果含 `elapsed_seconds`。`create` 已包含原生保存回读和可用时的官方语义核验，普通绘制无需再重复 inspect/verify；独立原生渲染按需执行。
 
 新原型默认整页水平居中，控件坐标和文字对齐保持设计值。需要左对齐时，在 spec 工程级或单页写 `"page_alignment":"left"`。已有原型用 `{"page_updates":[{"page":"页面名","set":{"page_alignment":"center"}}]}` 调用 `edit`，再重新导出即可；详细格式和宽屏/手机回归见 [spec 文档](references/spec.md#页面演示对齐检查)。
 
@@ -123,6 +130,8 @@ python "$skill\scripts\smoke_test.py"
 
 ```powershell
 Push-Location $skill
+# 先检查已有依赖；仅缺失时再执行下方安装
+node .\scripts\runtime_test.cjs --doctor
 npm install
 npx playwright install chromium
 Pop-Location
@@ -131,6 +140,8 @@ node "$skill\scripts\runtime_test.cjs" .\outputs\advanced-html "$skill\examples\
 ```
 
 测试使用无头浏览器 DOM 交互，不移动桌面鼠标，不向 Windows 桌面发送键盘输入。临时 HTTP 服务仅监听 `127.0.0.1`，结束后关闭。stdout 输出 JSON 报告，stderr 显示当前步骤；任何断言或页面脚本错误都会导致非零退出。
+
+在测试计划中使用 `screenshot:"screenshots/login.png"` 可一次保存多张截图，路径相对计划文件；原 `screenshot:true` 与命令行预览 PNG 用法保留。具体例子见 [交互文档](references/interactions.md)。
 
 其他两组测试：
 

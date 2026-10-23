@@ -72,6 +72,34 @@ Axure 的无限编辑画布和浏览器演示是两件事。`page_alignment` 只
 
 模板可创建不等于每个属性/事件已验证，具体见能力矩阵。控件克隆时清除默认库自带的演示事件和 AdaptiveStyles。
 
+### 外观速查
+
+常用精细外观无需查询私有模型。控件上可以直接组合：
+
+```json
+{
+  "native_style":{
+    "CORNER_RADIUS":16,
+    "OUTER_SHADOW":{"On":true,"OffsetX":0,"OffsetY":8,"BlurRadius":24,"Spread":0,"Color":"#16000000"}
+  },
+  "state_styles":{
+    "MouseOver":{"FILL":"#4338CA"},
+    "Focused":{"BORDER_FILL":"#A5B4FC","BORDER_WIDTH":1}
+  }
+}
+```
+
+`OUTER_SHADOW` 字段区分大小写；`Color` 接受 #RRGGBB / #AARRGGBB 或原生 ARGB 整数，不能写 `color`、`blur` 等 CSS 字段。`BORDER_VISIBILITY` 是原生整数掩码，按实际需求查询默认值；写 false 会规范为 0。要改变聚焦描边，通常用 BORDER_FILL/BORDER_WIDTH 即可。
+
+未知样式先查询其模板，不通过反复生成工程试字段：
+
+```powershell
+python "$axureSkill\scripts\axure_skill.py" styles
+python "$axureSkill\scripts\axure_skill.py" styles --property OUTER_SHADOW
+```
+
+返回属性默认值、原生类型及结构字段；查询的是本机模板，不能据此声称每个属性的所有运行效果均已验证。
+
 复选框和单选框显示高度由字体测量；repeater 显示尺寸由内容计算。`inspect` 返回保存 bounds，官方 API 返回计算后的可视 bounds；不能承诺二者尺寸始终相同。输入框提示在编辑画布 PNG 可能不显示，运行时 HTML 才体现。
 
 ## 下拉列表与状态样式
@@ -131,6 +159,9 @@ Axure 的无限编辑画布和浏览器演示是两件事。`page_alignment` 只
 - `edit --input SOURCE.rp --patch PATCH --output NEW.rp`：新工程、patch、可用时 verification。
 - `export-html FILE --output NEW_DIR`：Axure 自身生成器产出的完整本地 HTML；不开浏览器、不上传。
 - `models [--model MODEL | --enum FULL_ENUM_NAME]`：真实模型字段和枚举。
+- `styles [--property PNAME]`：常用样式或指定样式的实际字段、类型及默认值。
+
+CLI 成功和失败都返回 `elapsed_seconds`，用于区分本机命令耗时与宿主的模型等待/生成时间。
 
 工程及伴随文件不覆盖；HTML 目录必须是新目录。临时 staging 在成功/失败后清理。API 缺失时仍做原生回读，但不能声称经过官方独立验证。渲染目录中的同名 PNG 会更新，使用本次专用目录。
 

@@ -1,5 +1,6 @@
 """RP9 intermediate model helpers; names match verified build 9.0.0.3744."""
 import copy
+import math
 import uuid
 
 ZERO = '00000000-0000-0000-0000-000000000000'
@@ -55,7 +56,25 @@ def scalar(v, kind=None):
 
 def set_value(node, new):
     if 'v' in node:
-        node['v'] = str(new) if node['t'] in ('System.Double', 'System.Single') else new
+        kind = node['t']
+        # Match Decode's CLR conversion before comparing the native readback.
+        # E.g. BORDER_VISIBILITY uses Int32: false must be stored as 0, not false.
+        if kind in ('System.Byte', 'System.SByte', 'System.Int16', 'System.UInt16',
+                    'System.Int32', 'System.UInt32', 'System.Int64', 'System.UInt64'):
+            if not isinstance(new, (int, float)) or not math.isfinite(new) or int(new) != new:
+                raise ValueError('Expected an integer for ' + kind + ': ' + repr(new))
+            new = int(new)
+        elif kind == 'System.Boolean':
+            if not isinstance(new, (bool, int)) or new not in (False, True):
+                raise ValueError('Expected a boolean for ' + kind + ': ' + repr(new))
+            new = bool(new)
+        elif kind in ('System.Double', 'System.Single'):
+            if isinstance(new, bool) or not math.isfinite(float(new)):
+                raise ValueError('Expected a finite number for ' + kind + ': ' + repr(new))
+            new = str(new)
+        elif kind == 'System.String':
+            new = str(new)
+        node['v'] = new
         return
     fs = node.get('f', {})
     if len(fs) != 1:

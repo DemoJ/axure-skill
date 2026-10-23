@@ -225,6 +225,8 @@ class NativeCompiler:
                 for key, child in val.items():
                     node = get(target, key)
                     if node is None: raise ValueError('Unknown structured style field: ' + name + '.' + key)
+                    if key == 'Color' and isinstance(child, str) and child.startswith('#'):
+                        child = self.a.argb(child)
                     set_value(node, child)
             else:
                 set_value(target, val)
@@ -469,6 +471,10 @@ class NativeCompiler:
             raise ValueError('Unknown action or action fields: ' + str(spec))
         if 'targets' in spec and ('target' in spec or not isinstance(spec['targets'], list) or not spec['targets']):
             raise ValueError('Use a nonempty targets list or one target.')
+        if 'target' in spec and (not isinstance(spec['target'], str) or not spec['target']):
+            raise ValueError('target must be one widget ID string; use targets:["id1","id2"] for multiple widgets.')
+        if 'targets' in spec and any(not isinstance(t, str) or not t for t in spec['targets']):
+            raise ValueError('Each targets entry must be a nonempty widget ID string.')
         if 'duration' in spec and (isinstance(spec['duration'], bool) or not isinstance(spec['duration'], (int, float)) or spec['duration'] < 0):
             raise ValueError('duration must be nonnegative milliseconds.')
         if kind == 'set_panel_state' and spec.get('mode', 'Diagram') == 'Diagram' and 'state' not in spec:

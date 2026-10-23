@@ -84,6 +84,8 @@ columns 必须非空、唯一；每行只可包含已声明列，缺失值为 ""
 
 所有动作有 type；target 为同页控件 ID。下列标注「多目标」的动作也可用非空 targets 列表，不能同时给 target。
 
+正确的多目标写法为 `{"type":"show","targets":["a","b"]}`，不是 `"target":["a","b"]`。
+
 | type | 字段与默认值 |
 |---|---|
 | open_page | page（创建为 spec 页面 ID，编辑为名称/GUID），window=Current |
@@ -136,9 +138,22 @@ python scripts/axure_skill.py models --enum Axure.Constants.IxEventType
 `scripts/runtime_test.cjs` 使用 Playwright 无头 Chromium 和退出即关闭的本机回环 HTTP 服务。安装 Node/Playwright/浏览器仅在运行此测试时需要；生成 RP/HTML 无此依赖。本机配置见 setup 文档。
 
 ```powershell
+node scripts/runtime_test.cjs --doctor
 node scripts/runtime_test.cjs 'C:\path\prototype-html' examples/advanced.test.json 'C:\path\preview.png'
 ```
 
-测试计划结构为 `{"steps":[...]}`，可指定 viewport。step 支持 open（页面名）、click、hover、target、fill、text/texts、visible、value、checked、disabled、options、url、style（CSS computed style）、visual_style（内部 _div 样式）、rotation（角度）、focused、wait（毫秒）、screenshot=true。fill 前在浏览器内点击输入框，以触发 Axure 提示清除逻辑。页面脚本错误将使测试失败。
+`--doctor` 只检查已有 Playwright 和浏览器，不执行安装；ok:false 时按实际需要配置依赖，RP/HTML 生成仍可继续。
+
+测试计划结构为 `{"steps":[...]}`，可指定 viewport。step 支持 open（页面名）、click、hover、target、fill、text/texts、visible、value、checked、disabled、options、url、style（CSS computed style）、visual_style（内部 _div 样式）、rotation（角度）、focused、wait（毫秒）、screenshot。`visible` 会等待显隐完成（默认最多 8 秒），避免异步动作尚未结束就误报失败；无需为正常显隐手写固定 sleep。fill 前在浏览器内点击输入框，以触发 Axure 提示清除逻辑。页面脚本错误将使测试失败。
+
+`screenshot:true` 保留原行为，写入命令的预览 PNG 参数；`screenshot:"相对路径.png"` 保存到测试计划所在目录下的指定位置。同一次运行可以保存多个页面/状态/视口截图，JSON 报告的 `screenshots` 列出实际文件。例如：
+
+```json
+{"viewport":{"width":390,"height":844},"steps":[
+  {"open":"登录","screenshot":"screenshots/login-phone.png"},
+  {"viewport":{"width":1440,"height":1000},"page_alignment":"center","screenshot":"screenshots/login-wide.png"},
+  {"click":"submit","target":"error","visible":true,"screenshot":"screenshots/login-error.png"}
+]}
+```
 
 stdout 是 JSON 报告，stderr 显示当前步骤；保存报告作为执行证据。该测试操作无头浏览器 DOM，不使用桌面输入。示例 test 计划必须与对应 spec 一起使用。

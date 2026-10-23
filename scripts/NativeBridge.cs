@@ -115,6 +115,26 @@ internal static class NativeBridge
         if(d!=null){if(d.ContainsKey("t") && d.ContainsKey("v")){if((string)d["t"]=="System.Double")d["v"]=Convert.ToDouble(d["v"],System.Globalization.CultureInfo.InvariantCulture).ToString("R",System.Globalization.CultureInfo.InvariantCulture);if((string)d["t"]=="System.Single")d["v"]=Convert.ToSingle(d["v"],System.Globalization.CultureInfo.InvariantCulture).ToString("R",System.Globalization.CultureInfo.InvariantCulture);}foreach(var v in d.Values.ToArray())Normalize(v);return;}
         if(obj is IEnumerable && !(obj is string))foreach(var v in (IEnumerable)obj)Normalize(v);
     }
+    static string Difference(object expected,object actual,string path)
+    {
+        if(expected==null || actual==null)return expected==actual?null:path+" expected "+json.Serialize(expected)+", read "+json.Serialize(actual);
+        var left=expected as Dictionary<string,object>;var right=actual as Dictionary<string,object>;
+        if(left!=null && right!=null) {
+            foreach(var key in left.Keys.Union(right.Keys)) {
+                if(!left.ContainsKey(key)||!right.ContainsKey(key))return path+"/"+key+" field missing after readback";
+                string diff=Difference(left[key],right[key],path+"/"+key);if(diff!=null)return diff;
+            }
+            return null;
+        }
+        if(expected is IList && actual is IList) {
+            var a=(IList)expected;var b=(IList)actual;
+            if(a.Count!=b.Count)return path+" count expected "+a.Count+", read "+b.Count;
+            for(int i=0;i<a.Count;i++){string diff=Difference(a[i],b[i],path+"/"+i);if(diff!=null)return diff;}
+            return null;
+        }
+        string x=json.Serialize(expected),y=json.Serialize(actual);
+        return x==y?null:path+" expected "+x.Substring(0,Math.Min(x.Length,160))+", read "+y.Substring(0,Math.Min(y.Length,160));
+    }
     sealed class Part { public Dictionary<string,object> Parent;public string Key;public int Offset;public byte[] Bytes;public string File; }
     static void Collect(Dictionary<string,object> node,List<Part> parts) { if(node.ContainsKey("parts"))foreach(var p in D(node["parts"]))parts.Add(new Part{Parent=D(node["parts"]),Key=p.Key,Offset=Convert.ToInt32(p.Value)});if(node.ContainsKey("children"))foreach(var ch in D(node["children"]).Values)Collect(D(ch),parts); }
     static List<Part> Read(string file,out Dictionary<string,object> index)
@@ -136,7 +156,7 @@ internal static class NativeBridge
         if(File.Exists(output))throw new Exception("Output exists. Use a new output path.");
         var index=D(json.DeserializeObject(File.ReadAllText(Path.Combine(folder,"index.json"))));var parts=new List<Part>();CollectStrings(D(index["root"]),parts);
         int offset=0,verified=0;
-        foreach(var p in parts){var jp=Path.Combine(folder,p.File+".json");p.Bytes=File.ReadAllBytes(Path.Combine(folder,p.File+".part"));if(File.Exists(jp)){var c=Load(File.ReadAllBytes(Path.Combine(folder,p.File+".raw")));var dto=json.DeserializeObject(File.ReadAllText(jp));Normalize(dto);Import(c,dto);var raw=Save(c);var check=Export(Load(raw));if(json.Serialize(check)!=json.Serialize(dto)){File.WriteAllText(Path.Combine(folder,p.File+".checked"),json.Serialize(check));throw new Exception("Native parser roundtrip mismatch: "+p.File);}p.Bytes=Gzip(raw,true);verified++;}p.Parent[p.Key]=offset;offset+=8+p.Bytes.Length;}
+        foreach(var p in parts){var jp=Path.Combine(folder,p.File+".json");p.Bytes=File.ReadAllBytes(Path.Combine(folder,p.File+".part"));if(File.Exists(jp)){var c=Load(File.ReadAllBytes(Path.Combine(folder,p.File+".raw")));var dto=json.DeserializeObject(File.ReadAllText(jp));Normalize(dto);Import(c,dto);var raw=Save(c);var check=Export(Load(raw));if(json.Serialize(check)!=json.Serialize(dto)){File.WriteAllText(Path.Combine(folder,p.File+".checked"),json.Serialize(check));throw new Exception("Native parser roundtrip mismatch: "+p.File+"; "+(Difference(dto,check,"$")??"serialized field order changed"));}p.Bytes=Gzip(raw,true);verified++;}p.Parent[p.Key]=offset;offset+=8+p.Bytes.Length;}
         var header=Lz(Encoding.UTF8.GetBytes(json.Serialize(index)),true);using(var m=new MemoryStream())using(var w=new BinaryWriter(m)){w.Write(new byte[]{172,239,9,0});w.Write(header.Length);w.Write(header);w.Write(0);for(int n=0;n<parts.Count;n++){w.Write(parts[n].Bytes.Length);w.Write(parts[n].Bytes);if(n+1<parts.Count)w.Write(0);}using(var f=new FileStream(output,FileMode.CreateNew,FileAccess.Write,FileShare.None))m.WriteTo(f);}
         Console.WriteLine(json.Serialize(new{ok=true,nativePackagesVerified=verified,output=Path.GetFullPath(output)}));
     }

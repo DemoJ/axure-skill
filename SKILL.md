@@ -23,24 +23,33 @@ python "$axureSkill\scripts\axure_skill.py" doctor
 
 执行器必须能访问本机 Windows、已安装的 Axure 和目标文件；仅能访问云端容器的 Agent 无法直接操作用户本地 Axure，需要由用户提供能在这台 Windows 上执行命令的连接。`agents/openai.yaml` 只是可选的宿主展示信息，其他 Agent 可忽略，不参与运行。
 
-CLI 的 stdout 是 JSON，成功时含 `ok:true`；失败时非零退出并在 stderr 返回 `ok:false/error`。同时检查退出码和 JSON，不能只看输出文件存在。
+CLI 的 stdout 是 JSON，成功时含 `ok:true` 和 `elapsed_seconds`；失败时非零退出并在 stderr 返回 `ok:false/error/elapsed_seconds`。同时检查退出码和 JSON，不能只看输出文件存在。
 
 `doctor` 检查准确的 Axure 二进制 SHA256；版本不符时报告限制，不绕过检查。依赖问题读 [references/setup.md](references/setup.md)。此适配器不是 RP10/11 通用接口。
 
 ## 创建与交互
 
+普通绘制按公开 spec/CLI 工作，不需要先阅读 `scripts/` 源码、扫描缓存或查询全量原生枚举。先读 spec；有交互再读 interactions。常用圆角、阴影和交互样式的可用写法见 spec 的「外观速查」，需要其他样式时运行 `styles --property 属性名`，直接获得字段名、类型和默认值。只有需求确实超出现有接口时才研究原生扩展。
+
+按用户要求确定页面范围与精细程度；一个登录页可用面板表达切换、错误和成功状态，不自动扩展工作台等业务页面。需要重复控件时可用短 Python 生成 spec，复用样式字典和布局函数，避免手写大量重复 JSON。用户要求精美时保留视觉设计与检查，优先使用已支持的样式能力。
+
 1. 按 [references/spec.md](references/spec.md) 写 UTF-8 JSON spec，使用稳定的页面/控件 ID。绘制新原型时同时安排**原生编辑布局**：固定宽度画面默认在 1440px 参考编辑区内水平居中，并在两侧至少留 160px；390px 移动端画面从 x=525 开始，宽页面可扩大参考编辑区。它是实际控件坐标安排，不是假定存在有限画板，也不只设置浏览器对齐；用户指定坐标时遵从用户。工程默认同时使用 Axure 原生 `page_alignment:"center"`，单页可覆盖为 `left`。原生编辑留白和演示的具体约束见 spec 文档。涉及事件、面板或数据时再读 [references/interactions.md](references/interactions.md)。简单布局参考 `examples/login.json`，复杂原型参考 `examples/advanced.json`，表单/动作/状态样式参考 `examples/controls.json`。
-2. 在用户工作区选择新输出路径，生成并核验：
+2. 在用户工作区选择新输出路径，先生成可打开的原生工程：
 
 ```powershell
 python "$axureSkill\scripts\axure_skill.py" create --spec 'C:\path\design.json' --output 'C:\path\prototype.rp'
-python "$axureSkill\scripts\axure_skill.py" verify 'C:\path\prototype.rp' --render-dir 'C:\path\native-preview'
 python "$axureSkill\scripts\axure_skill.py" export-html 'C:\path\prototype.rp' --output 'C:\path\prototype-html'
 ```
 
-3. 检查真实视觉结果。核对 `.rp` 中画面左右留白和实际保存的坐标；`create` 默认打开首个页面。固定宽度原型同时检查桌面宽屏和目标手机/页面宽度下的 HTML，确认宽屏时整体居中、同宽时无意外水平滚动；演示使用 Axure 播放器时也检查其内容区域。原生居中导出会消除正的起始 x 偏移；不要用额外背景矩形或占位控件撑出编辑区，否则会扩大导出宽度。复杂交互应对导出的 HTML 做关键流程测试，再交付 `.rp`、预览和验证结果。用 `scripts/runtime_test.cjs` 执行无头测试，方法见 interactions 文档；原生留白与导出居中回归示例为 `examples/presentation.json` 和 `examples/presentation.test.json`。测试仅使用浏览器内部输入，不移动桌面鼠标。
+`create` 成功后即可在进度消息给出 `.rp` 路径并继续验收，不必等截图和说明文件写完才告知文件已生成。它已执行原生保存/回读核验；不为同一次构建重复调用 `inspect` 或无渲染的 `verify`。只有需要独立 API 核验/原生 PNG 且 `doctor.official_read_api:true` 时，再运行 `verify FILE --render-dir DIR`；API 缺失不阻塞 RP/HTML 交付，也不为普通绘制自动下载它。
+
+3. 检查真实视觉结果。固定宽度原型检查目标手机/页面宽度及桌面宽屏下的 HTML，确认整体居中、同宽时无意外水平滚动；用户实际使用 Axure 播放器时再检查其内容区。原生居中导出会消除正的起始 x 偏移，不要用额外背景或占位控件撑出编辑区。对交互原型，使用一次配套测试计划覆盖关键路径并在同一次浏览器运行中保存各状态截图；先汇总问题再集中修复，修复后复查受影响流程和画面。检查通过后交付 `.rp`、预览和真实验证结果，不以新增业务页或重复全量截图代替视觉完善。
+
+无头检查前用 `node "$axureSkill\scripts\runtime_test.cjs" --doctor` 查询已有 Playwright/Chromium，生成 RP 无需这些依赖，不要先重复安装浏览器。测试 step 的 `screenshot:"screenshots/login-phone.png"` 可直接保存多张截图，路径相对测试计划；无需另写 shots/capture 脚本。用法见 interactions 文档。测试仅使用浏览器内部输入，不移动桌面鼠标。
 
 `create` 会做原生保存/回读，核对面板内和中继器项内的控件文字、保存坐标及数据；官方 API 可用时再核对页面、面板状态中的控件和字体。它不能代替交互运行测试。旁边保留 `.spec.json`、`.manifest.json`、`.verification.json` 方便迭代。
+
+遇到错误根据具体字段修复：`target` 是单个 ID，多目标用 `targets`；原生样式字段和类型用 `styles` 查。回读不一致会给出 package、字段路径和期望/实际值；不要将相同输入反复重试或用大量控件组合试验猜测原因。实际需要扩展桥接时再进入维护流程。
 
 **官方 API 的整页 PNG 会漏画动态面板内容**；单独状态 PNG 可以显示该状态。完整复杂预览使用真实 HTML 的无头浏览器截图，不能把空白区域当作工程正常的证据。
 

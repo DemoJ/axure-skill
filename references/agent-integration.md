@@ -20,6 +20,12 @@
 
 同一 skill 放到多个会被同时扫描的位置，可能产生重复发现；为每个宿主选择一个位置即可。加载后的自然语言请求可以相同；显式调用方式由宿主决定，例如有的使用 `/axure-skill`，有的使用 `$axure-skill`，不要把其中一种当作通用协议。
 
+## OpenCode 中的常规绘制
+
+使用加载时返回的 skill 根目录调用 CLI，不需要为普通页面先阅读桥接源码或扫描整个缓存。样式参数用 `styles --property OUTER_SHADOW` 等命令查询，常用写法见 spec 的外观速查。`create` 已包含原生回读校验；成功后先给出 RP 路径，HTML 测试可在同一计划中保存多张截图。
+
+Playwright/Chromium 只在运行 HTML 检查时需要，先用 `runtime_test.cjs --doctor` 检查现有安装；缺少官方 API 时跳过可选 `verify`。CLI 的 `elapsed_seconds` 只计本地执行，宿主显示的整轮耗时还包含模型等待、生成和结果检查。更新 skill 后，新会话重新加载；进行中的会话应重新读取已更新的 SKILL.md，避免继续遵从先前注入的旧说明。
+
 ## 没有 skill 加载器，但有文件和命令工具的 Agent
 
 不需要转换成厂商专有配置。把本目录放在任意可访问的位置，给 Agent 以下指令，并替换真实路径：

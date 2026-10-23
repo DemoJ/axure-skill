@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import uuid
 
 from model import *
@@ -818,6 +819,7 @@ def main():
     parser.add_argument('--axure-dir', type=Path, default=Path(os.environ.get('AXURE9_DIR', DEFAULT_INSTALL)))
     sub = parser.add_subparsers(dest='command', required=True)
     sub.add_parser('doctor')
+    styles = sub.add_parser('styles'); styles.add_argument('--property')
     schemas = sub.add_parser('models'); schemas.add_argument('--model'); schemas.add_argument('--enum')
     c = sub.add_parser('create'); c.add_argument('--spec', required=True, type=Path); c.add_argument('--output', required=True, type=Path)
     i = sub.add_parser('inspect'); i.add_argument('file', type=Path)
@@ -825,10 +827,14 @@ def main():
     h = sub.add_parser('export-html'); h.add_argument('file', type=Path); h.add_argument('--output', required=True, type=Path)
     e = sub.add_parser('edit'); e.add_argument('--input', required=True, type=Path); e.add_argument('--patch', required=True, type=Path); e.add_argument('--output', required=True, type=Path)
     args = parser.parse_args()
+    started = time.perf_counter()
     try:
         if args.command == 'doctor':
             result = {'ok': True, 'version': '9.0.0.3744', 'sha256': check_install(args.axure_dir), 'install': str(args.axure_dir), 'ui_automation': False,
                       'official_read_api': (HERE.parent / '.cache/public-api/Axure.Document.dll').is_file()}
+        elif args.command == 'styles':
+            from style_info import style_info
+            result = style_info(sys.modules[__name__], args.axure_dir, args.property)
         elif args.command == 'models':
             check_install(args.axure_dir)
             schema = model_schema(args.axure_dir)
@@ -853,9 +859,10 @@ def main():
         else:
             check_install(args.axure_dir)
             result = inspect(args.file, args.axure_dir)
+        result['elapsed_seconds'] = round(time.perf_counter() - started, 3)
         print(json.dumps(result, ensure_ascii=False, indent=2))
     except Exception as error:
-        print(json.dumps({'ok': False, 'error': str(error)}, ensure_ascii=False), file=sys.stderr)
+        print(json.dumps({'ok': False, 'error': str(error), 'elapsed_seconds': round(time.perf_counter() - started, 3)}, ensure_ascii=False), file=sys.stderr)
         return 1
     return 0
 
